@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>来源详情 · 来源看板</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="source">
+  <div class="wrap">
+
+    <header class="topbar">
+      <a class="back-link" href="index.html">&larr; 回首页</a>
+      <div class="top-actions">
+        <button type="button" id="btn-export" class="btn btn-ghost">导出数据</button>
+        <button type="button" id="btn-import" class="btn btn-ghost">导入数据</button>
+        <input type="file" id="file-import" accept=".json,application/json" hidden>
+      </div>
+    </header>
+
+    <section id="source-panel" class="panel">
+      <div class="src-detail-head">
+        <div class="src-detail-left">
+          <h1 id="sd-name" class="src-detail-name"></h1>
+          <p class="src-detail-meta">
+            <span id="sd-last" class="src-detail-last"></span>
+            <span id="sd-count" class="src-detail-count"></span>
+          </p>
+          <p id="sd-url-row" class="src-detail-url-row" hidden><span id="sd-url"></span></p>
+        </div>
+        <div class="src-detail-acts">
+          <button type="button" id="btn-record-here" class="btn btn-primary">记录一条</button>
+          <button type="button" id="btn-rename" class="btn btn-ghost">重命名</button>
+          <button type="button" id="btn-delete-source" class="btn btn-ghost is-danger">删除来源</button>
+        </div>
+      </div>
+
+      <h2 class="panel-title">这个来源下的记录</h2>
+      <ul id="timeline" class="timeline"></ul>
+    </section>
+
+    <p id="source-missing" class="empty" hidden></p>
+
+    <footer class="foot">
+      <span>数据只存在这台电脑的这个浏览器里，不上传、不联网。</span>
+      <span>记得每周点一次「导出数据」，留一份能拷走的备份。</span>
+    </footer>
+
+  </div>
+
+  <div id="modal-root"></div>
+
+  <script src="assets/config.js"></script>
+  <script src="assets/store.js"></script>
+  <script src="assets/rules.js"></script>
+  <script src="assets/ui.js"></script>
+</body>
+</html>
