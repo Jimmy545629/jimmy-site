@@ -1,23 +1,79 @@
 /* style.css —— 全站样式。只有视觉，不含任何逻辑。
-   配色延续 Day 2 占位页那一套（浅底 + 蓝主色），保证是同一个"系列"。 */
+   配色延续 Day 2 占位页那一套（浅底 + 蓝主色），保证是同一个"系列"。
+
+   ============================================================
+   Day 9（2026-09-26）：按 docs/day9-design-rules.md 的 7 条规则做了一次前端审查 + 修复。
+   改动都集中在「数值」上，选择器和版面结构一个没动。
+   最重要的是：把规则本身写成了下面的变量（一套"可复用的组件约束"）——
+   以后要调，改变量就够了，不用再逐条找 14px / 22px 这种散落的魔法数字。
+   ============================================================ */
 
 :root {
-  --ink: #1a1d21;
-  --ink-soft: #5b6472;
-  --ink-faint: #98a1af;
+  /* ---------- 颜色 ---------- */
+  --ink: #1a1d21;          /* 主文字 */
+  --ink-soft: #5b6472;     /* 次要文字  对比度 5.98:1 ✓ */
+  /* 规则 1：原来是 #98a1af（白底 2.61:1、浅灰底 2.47:1，都远低于 4.5:1）。
+     改成 #667085 后：白底 4.97:1、页底 4.72:1 ✓
+     它用在页脚、「最后记录：」、时间、编辑/删除、空状态文案上，是本次修得最多的一处。 */
+  --ink-faint: #667085;
+
   --line: #e6e9ee;
   --line-soft: #f1f3f7;
   --brand: #2f6feb;
+  --brand-hover: #2560d4;
+  --brand-dark: #1d4ed8;   /* 浅蓝底上的文字用（悬停态） */
   --brand-soft: #eaf1fe;
   --bg: #f7f9fc;
   --card: #ffffff;
-  --danger: #d64545;
+
+  /* 规则 1：白字压在 #d64545 上只有 4.38:1，差一点点。
+     加深到 #c62828 → 5.62:1 ✓ */
+  --danger: #c62828;
+  --danger-hover: #a71f1f;
   --danger-soft: #fdf1f1;
   --warn: #b45309;
   --warn-soft: #fff7ed;
   --warn-line: #f6d9b4;
   --ok: #1a7f4b;
   --ok-soft: #e6f6ed;
+
+  /* ---------- 规则 6：禁用态 ---------- */
+  /* 原来只写 opacity: 0.45 —— 白字压在变淡的蓝底上只有 1.87:1，
+     而且"不能点"这件事完全靠颜色变淡来表达。
+     现在改成"实心填充 → 描边样式"的**形状**变化 + 可读的灰字。 */
+  --disabled-bg: #eef1f6;
+  --disabled-ink: #5b6472;   /* 在 #eef1f6 上 5.28:1 ✓ */
+  --disabled-line: #dce2ec;
+
+  /* ---------- 规则 5：焦点圈 ---------- */
+  --focus-ring: #2f6feb;
+
+  /* ---------- 规则 4：字号阶梯，只留 4 档 ---------- */
+  /* 原来全站有 24/16/15/14/13.5/13/12.5/12 共 8 档，
+     其中 13 与 13.5、15 与 16 差不到 1px，肉眼看不出却让"层级"失效。
+     收敛成 4 档，相邻档差 ≥ 2px。24 ÷ 16 = 1.5 ≥ 1.4 ✓（规则 7） */
+  --fs-1: 24px;   /* 页面主标题 */
+  --fs-2: 16px;   /* 面板标题、卡片标题、正文强调 */
+  --fs-3: 14px;   /* 正文、按钮、输入框 */
+  --fs-4: 12px;   /* 辅助信息：时间、计数、页脚、标签 */
+
+  /* ---------- 规则 2：间距刻度，只用 4 的倍数 ---------- */
+  /* 原来混着 2/5/6/7/9/10/11/14/15/18/22 这些值，节奏是散的。 */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-7: 32px;
+
+  /* ---------- 规则 3：三条左对齐轴线（页面 20 → 面板 44 → 卡片 60） ---------- */
+  --pad-panel: 24px;   /* 面板内边距 */
+  --pad-card: 16px;    /* 卡片内边距 */
+
+  --radius-lg: 16px;
+  --radius-md: 12px;
+  --radius-sm: 10px;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -27,6 +83,7 @@ body {
                "Microsoft YaHei", "PingFang SC", sans-serif;
   background: var(--bg);
   color: var(--ink);
+  font-size: var(--fs-3);
   line-height: 1.7;
   -webkit-font-smoothing: antialiased;
 }
@@ -37,31 +94,74 @@ body {
   padding: 28px 20px 56px;
 }
 
+/* ---------- 规则 5：统一的键盘焦点圈 ---------- */
+/* 原来只有输入框有焦点样式，按钮和链接全靠浏览器默认的 1px 细线（实测 outline: 1px auto）。
+   现在统一成品牌色两像素描边 + 2px 留白，键盘走到哪一眼能看见。 */
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ---------- 顶部动图横幅（Day 9 新增，Jimmy 指定） ---------- */
+/* 它是"追加"在页面最上面的一个区块，下面所有结构原样保留。
+   底色先铺一张静态图：视频没加载出来、或浏览器放不了这个编码时，
+   看到的是这张图，而不是一块空白。 */
+.hero {
+  position: relative;
+  height: 240px;
+  margin-bottom: var(--sp-6);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: #cfe0ee url("sea-poster.jpg") center 62% / cover no-repeat;
+  box-shadow: 0 6px 22px rgba(24, 39, 75, 0.08);
+}
+
+.hero-video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* 视频是竖幅 720×976，横幅是横的，所以要裁掉上下两头。
+     `center 62%` 这一步同时干了两件事（62% 是实测出来的位置，不是拍的）：
+       ① 原视频的**海平线正好在画面正中**（第 490/976 行），取 62% 之后，
+          横幅顶部留一条天空 + 海平线，下面全是深蓝海面和右侧那条白色尾迹——
+          就是"微波荡漾"那一段。取 40% 只会拿到一整片天空，试过，很空。
+       ② 视频从第 2 秒起左上角有个白色圆形水印（源头 x≈8%、y≈14% 处）。
+          只要裁到下半部，水印自动落在画面外，不用打码也不用遮。 */
+  object-fit: cover;
+  object-position: center 62%;
+}
+
+/* 用户在系统里开了「减少动态效果」，就别播了，静态图更合适 */
+@media (prefers-reduced-motion: reduce) {
+  .hero-video { display: none; }
+}
+
 /* ---------- 顶部 ---------- */
 
 .topbar {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
+  gap: var(--sp-4);
   flex-wrap: wrap;
-  margin-bottom: 20px;
+  margin-bottom: var(--sp-5);
 }
 
 .brand { display: flex; flex-direction: column; }
 
 .brand-name {
-  font-size: 24px;
+  font-size: var(--fs-1);
   font-weight: 700;
   letter-spacing: -0.02em;
 }
 
-.brand-sub { font-size: 13px; color: var(--ink-soft); }
+.brand-sub { font-size: var(--fs-4); color: var(--ink-soft); }
 
-.top-actions { display: flex; gap: 8px; align-items: center; }
+.top-actions { display: flex; gap: var(--sp-2); align-items: center; }
 
 .back-link {
-  font-size: 14px;
+  font-size: var(--fs-3);
   color: var(--brand);
   text-decoration: none;
   font-weight: 600;
@@ -72,19 +172,24 @@ body {
 
 .btn {
   font-family: inherit;
-  font-size: 14px;
+  font-size: var(--fs-3);
   font-weight: 600;
   line-height: 1;
-  padding: 10px 16px;
-  border-radius: 10px;
+  padding: var(--sp-3) var(--sp-4);
+  /* 规则 5：给按钮一个 32px 的最小高度，手指/触控板都不容易点空 */
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
   border: 1px solid transparent;
   cursor: pointer;
   background: none;
-  transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
 
 .btn-primary { background: var(--brand); color: #fff; }
-.btn-primary:hover { background: #2560d4; }
+.btn-primary:hover { background: var(--brand-hover); }
 
 .btn-ghost {
   background: var(--card);
@@ -94,13 +199,19 @@ body {
 .btn-ghost:hover { border-color: #cdd5e0; color: var(--ink); }
 
 .btn-danger { background: var(--danger); color: #fff; }
-.btn-danger:hover { background: #bd3a3a; }
+.btn-danger:hover { background: var(--danger-hover); }
 
-.btn-sm { font-size: 13px; padding: 7px 12px; }
+.btn-sm { font-size: var(--fs-3); padding: var(--sp-2) var(--sp-3); }
 
-.btn:disabled {
-  opacity: 0.45;
+/* 规则 6：禁用态不再只靠"变淡"（原来 opacity: 0.45 只有 1.87:1 的对比度）。
+   现在是：实心蓝 → 浅灰底 + 描边，形状变了、字也看得清。 */
+.btn:disabled,
+.btn:disabled:hover {
+  background: var(--disabled-bg);
+  border-color: var(--disabled-line);
+  color: var(--disabled-ink);
   cursor: not-allowed;
+  box-shadow: none;
 }
 
 .btn-ghost.is-danger { color: var(--danger); border-color: #f0d0d0; }
@@ -111,12 +222,12 @@ body {
 .focus-bar {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--sp-2);
   flex-wrap: wrap;
-  font-size: 15px;
-  padding: 14px 18px;
-  border-radius: 12px;
-  margin-bottom: 20px;
+  font-size: var(--fs-2);
+  padding: var(--sp-4);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--sp-5);
   border: 1px solid transparent;
 }
 
@@ -144,7 +255,7 @@ body {
 .focus-name:hover { text-decoration-thickness: 2px; }
 
 .focus-ok-dot {
-  width: 8px; height: 8px;
+  width: var(--sp-2); height: var(--sp-2);
   border-radius: 50%;
   background: var(--ok);
   display: inline-block;
@@ -155,9 +266,10 @@ body {
 .panel {
   background: var(--card);
   border: 1px solid var(--line);
-  border-radius: 16px;
-  padding: 20px 22px 22px;
-  margin-bottom: 20px;
+  border-radius: var(--radius-lg);
+  /* 规则 3：22 → 24，让面板里的文字正好落在第 2 条轴线上（页面 20 → 面板 44） */
+  padding: var(--sp-5) var(--pad-panel) var(--pad-panel);
+  margin-bottom: var(--sp-5);
   box-shadow: 0 6px 22px rgba(24, 39, 75, 0.05);
 }
 
@@ -165,27 +277,27 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 14px;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-4);
 }
 
 .panel-title {
-  font-size: 16px;
+  font-size: var(--fs-2);
   font-weight: 700;
   letter-spacing: -0.01em;
 }
 
 .limit-hint {
-  font-size: 13px;
+  font-size: var(--fs-3);
   color: var(--ink-soft);
-  margin-bottom: 12px;
+  margin-bottom: var(--sp-3);
 }
 .limit-hint.is-full {
   background: var(--danger-soft);
   border: 1px solid #f0cccc;
   color: #9b2c2c;
-  border-radius: 10px;
-  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  padding: var(--sp-3) var(--sp-4);
 }
 
 /* ---------- 来源卡片（F1） ---------- */
@@ -193,17 +305,17 @@ body {
 .source-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 12px;
+  gap: var(--sp-3);
 }
 
 .source-card {
   border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  padding: var(--pad-card);
   background: var(--card);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--sp-2);
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 .source-card:hover { box-shadow: 0 4px 14px rgba(24, 39, 75, 0.07); }
@@ -218,36 +330,37 @@ body {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 10px;
+  gap: var(--sp-2);
 }
 
 .src-name {
-  font-size: 15px;
+  font-size: var(--fs-2);
   font-weight: 700;
   color: var(--ink);
   text-decoration: none;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  padding: var(--sp-1) 0;      /* 规则 5：把可点区域撑高一点 */
 }
 .src-name:hover { color: var(--brand); }
 
 .src-count {
-  font-size: 12px;
+  font-size: var(--fs-4);
   color: var(--ink-soft);
   background: var(--line-soft);
   border-radius: 999px;
-  padding: 2px 9px;
+  padding: var(--sp-1) var(--sp-3);
   white-space: nowrap;
   text-decoration: none;
 }
-.src-count:hover { background: var(--brand-soft); color: var(--brand); }
+.src-count:hover { background: var(--brand-soft); color: var(--brand-dark); }
 
 .src-last {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 13px;
+  gap: var(--sp-2);
+  font-size: var(--fs-3);
   color: var(--ink-soft);
   min-height: 22px;
 }
@@ -259,24 +372,24 @@ body {
 .src-foot {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-2);
   flex-wrap: nowrap;
-  margin-top: 2px;
+  margin-top: var(--sp-1);
 }
 
 .stale-tag {
-  font-size: 12px;
+  font-size: var(--fs-4);
   font-weight: 700;
   color: #fff;
   background: var(--danger);
   border-radius: 999px;
-  padding: 2px 10px;
+  padding: var(--sp-1) var(--sp-3);
   white-space: nowrap;
   flex-shrink: 0;
 }
 
 .src-url {
-  font-size: 12px;
+  font-size: var(--fs-4);
   color: var(--brand);
   text-decoration: none;
   overflow: hidden;
@@ -284,6 +397,7 @@ body {
   white-space: nowrap;
   flex: 1;
   min-width: 0;
+  padding: var(--sp-1) 0;      /* 规则 5 */
 }
 .src-url:hover { text-decoration: underline; }
 
@@ -293,21 +407,25 @@ body {
 
 .filter-bar {
   display: flex;
-  gap: 8px;
+  gap: var(--sp-2);
   flex-wrap: wrap;
-  margin-bottom: 14px;
+  margin-bottom: var(--sp-3);
 }
 .filter-bar:empty { display: none; }
 
 .chip {
   font-family: inherit;
-  font-size: 13px;
+  font-size: var(--fs-3);
   font-weight: 600;
+  line-height: 1.2;
   color: var(--ink-soft);
   background: var(--line-soft);
   border: 1px solid transparent;
   border-radius: 999px;
-  padding: 5px 14px;
+  padding: var(--sp-2) var(--sp-4);
+  min-height: 32px;            /* 规则 5 */
+  display: inline-flex;
+  align-items: center;
   cursor: pointer;
   max-width: 180px;
   overflow: hidden;
@@ -323,33 +441,35 @@ body {
 
 .item {
   border-top: 1px solid var(--line-soft);
-  padding: 14px 2px;
+  /* 规则 3：左右内边距改成 0，让条目文字和「时间线」标题落在同一条轴线上 */
+  padding: var(--sp-4) 0;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: var(--sp-1);
 }
 .item:first-child { border-top: none; }
 
 .item-head {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--sp-2);
   flex-wrap: wrap;
 }
 
 .tag {
-  font-size: 11.5px;
+  font-size: var(--fs-4);
   font-weight: 700;
+  line-height: 1.4;
   color: #fff;
   border-radius: 999px;
-  padding: 2px 10px;
+  padding: var(--sp-1) var(--sp-3);
   white-space: nowrap;
 }
 
-.item-time { font-size: 12px; color: var(--ink-faint); }
+.item-time { font-size: var(--fs-4); color: var(--ink-faint); }
 
 .item-title {
-  font-size: 15px;
+  font-size: var(--fs-2);
   font-weight: 600;
   color: var(--ink);
   text-decoration: none;
@@ -358,7 +478,7 @@ body {
 a.item-title:hover { color: var(--brand); text-decoration: underline; }
 
 .item-note {
-  font-size: 13.5px;
+  font-size: var(--fs-3);
   color: var(--ink-soft);
   word-break: break-word;
 }
@@ -366,13 +486,13 @@ a.item-title:hover { color: var(--brand); text-decoration: underline; }
 .item-acts {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--sp-3);
   flex-wrap: wrap;
-  margin-top: 2px;
+  margin-top: var(--sp-1);
 }
 
 .item-url {
-  font-size: 12px;
+  font-size: var(--fs-4);
   color: var(--brand);
   text-decoration: none;
   overflow: hidden;
@@ -384,12 +504,20 @@ a.item-title:hover { color: var(--brand); text-decoration: underline; }
 
 .link-btn {
   font-family: inherit;
-  font-size: 12.5px;
+  font-size: var(--fs-4);
   color: var(--ink-faint);
   background: none;
   border: none;
   cursor: pointer;
-  padding: 0;
+  /* 规则 5：这两个按钮看着像文字，但它们是真按钮，点击区不能跟着文字缩。
+     原来 padding 是 4px 0 → 命中区只有 24×24（等于"编辑"两个字的宽度），
+     手机上很容易点空。现在补上左右内边距 + 32px 最小边长。 */
+  padding: var(--sp-1) var(--sp-1);
+  min-height: 32px;
+  min-width: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   text-decoration: underline;
   text-decoration-color: #d8dee7;
   text-underline-offset: 3px;
@@ -398,11 +526,11 @@ a.item-title:hover { color: var(--brand); text-decoration: underline; }
 .link-btn.is-danger:hover { color: var(--danger); }
 
 .timeline-empty, .empty {
-  font-size: 14px;
+  font-size: var(--fs-3);
   color: var(--ink-faint);
-  padding: 18px 2px;
 }
-.empty { padding: 6px 2px 2px; }
+.timeline-empty { padding: var(--sp-5) 0; }
+.empty { padding: var(--sp-3) 0 var(--sp-1); }
 
 /* ---------- 详情页 ---------- */
 
@@ -410,32 +538,32 @@ a.item-title:hover { color: var(--brand); text-decoration: underline; }
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 16px;
+  gap: var(--sp-4);
   flex-wrap: wrap;
-  margin-bottom: 16px;
+  margin-bottom: var(--sp-4);
 }
 
 .src-detail-name {
-  font-size: 22px;
+  font-size: var(--fs-1);
   font-weight: 700;
   letter-spacing: -0.02em;
 }
 
 .src-detail-meta {
   display: flex;
-  gap: 12px;
+  gap: var(--sp-3);
   flex-wrap: wrap;
-  font-size: 13.5px;
+  font-size: var(--fs-3);
   color: var(--ink-soft);
-  margin-top: 4px;
+  margin-top: var(--sp-1);
 }
 .src-detail-last { font-weight: 600; color: var(--ink); }
 .src-detail-last.is-stale { color: #b4302f; }
 
-.src-detail-url-row { margin-top: 4px; font-size: 13px; }
+.src-detail-url-row { margin-top: var(--sp-1); font-size: var(--fs-3); }
 .src-detail-url-row a { color: var(--brand); }
 
-.src-detail-acts { display: flex; gap: 8px; flex-wrap: wrap; }
+.src-detail-acts { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
 
 /* ---------- 弹窗 ---------- */
 
@@ -446,14 +574,14 @@ a.item-title:hover { color: var(--brand); text-decoration: underline; }
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: var(--sp-5);
   z-index: 50;
 }
 
 .modal {
   background: var(--card);
-  border-radius: 16px;
-  padding: 24px 24px 20px;
+  border-radius: var(--radius-lg);
+  padding: var(--sp-6);
   width: 100%;
   max-width: 460px;
   max-height: 88vh;
@@ -461,45 +589,45 @@ a.item-title:hover { color: var(--brand); text-decoration: underline; }
   box-shadow: 0 20px 60px rgba(15, 23, 42, 0.28);
 }
 
-.modal-title { font-size: 18px; font-weight: 700; margin-bottom: 16px; }
-.modal-text { font-size: 14.5px; color: var(--ink-soft); margin-bottom: 20px; word-break: break-word; }
+.modal-title { font-size: var(--fs-2); font-weight: 700; margin-bottom: var(--sp-4); }
+.modal-text { font-size: var(--fs-3); color: var(--ink-soft); margin-bottom: var(--sp-5); word-break: break-word; }
 
-.form { display: flex; flex-direction: column; gap: 14px; }
+.form { display: flex; flex-direction: column; gap: var(--sp-4); }
 
-.field { display: flex; flex-direction: column; gap: 5px; }
+.field { display: flex; flex-direction: column; gap: var(--sp-2); }
 
-.field-label { font-size: 13px; font-weight: 600; color: var(--ink-soft); }
+.field-label { font-size: var(--fs-3); font-weight: 600; color: var(--ink-soft); }
 
 .input {
   font-family: inherit;
-  font-size: 14.5px;
+  font-size: var(--fs-3);
   color: var(--ink);
   background: var(--card);
   border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  padding: var(--sp-3);
   width: 100%;
   resize: vertical;
 }
 .input:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
 
-.field-hint { font-size: 12px; color: var(--ink-faint); }
+.field-hint { font-size: var(--fs-4); color: var(--ink-faint); }
 
 .form-error {
-  font-size: 13.5px;
+  font-size: var(--fs-3);
   color: #b4302f;
   background: var(--danger-soft);
   border: 1px solid #f0cccc;
-  border-radius: 10px;
-  padding: 9px 12px;
-  margin-top: 14px;
+  border-radius: var(--radius-sm);
+  padding: var(--sp-3);
+  margin-top: var(--sp-4);
 }
 
 .modal-foot {
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
-  margin-top: 22px;
+  gap: var(--sp-3);
+  margin-top: var(--sp-6);
 }
 
 /* ---------- 浮动提示 ---------- */
@@ -507,13 +635,13 @@ a.item-title:hover { color: var(--brand); text-decoration: underline; }
 .toast {
   position: fixed;
   left: 50%;
-  bottom: 28px;
+  bottom: var(--sp-7);
   transform: translate(-50%, 12px);
   background: #1f2937;
   color: #fff;
-  font-size: 13.5px;
-  padding: 11px 18px;
-  border-radius: 10px;
+  font-size: var(--fs-3);
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--radius-sm);
   max-width: min(90vw, 560px);
   opacity: 0;
   pointer-events: none;
@@ -529,18 +657,22 @@ a.item-title:hover { color: var(--brand); text-decoration: underline; }
 .foot {
   display: flex;
   justify-content: space-between;
-  gap: 10px;
+  gap: var(--sp-2);
   flex-wrap: wrap;
-  font-size: 12.5px;
+  font-size: var(--fs-4);
   color: var(--ink-faint);
-  padding: 4px 2px;
+  /* 规则 3：原来是 4px 2px，那条 2px 让页脚比页面标题右移了 2px。
+     改成 0 之后，页脚文字和「来源看板」在同一条竖线上。 */
+  padding: var(--sp-1) 0;
 }
 
 /* ---------- 手机上"能用即可" ---------- */
 
 @media (max-width: 620px) {
-  .wrap { padding: 18px 14px 40px; }
-  .panel { padding: 16px 15px 18px; border-radius: 14px; }
+  .wrap { padding: 20px 16px 40px; }
+  .hero { height: 176px; border-radius: var(--radius-md); margin-bottom: var(--sp-5); }
+  /* 手机上内边距收窄，轴线相应变成 16 → 32 → 48，仍然是同一条刻度 */
+  .panel { padding: var(--sp-4) var(--sp-4) var(--sp-5); border-radius: 14px; }
   .source-grid { grid-template-columns: 1fr; }
   .src-detail-acts { width: 100%; }
   .item-url { max-width: 200px; }

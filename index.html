@@ -9,6 +9,19 @@
 <body data-page="home">
   <div class="wrap">
 
+    <!-- 顶部动图横幅（Day 9 新增）：海面微波 + 海鸥。
+         它只是"追加"在页面最上面的一条，下面的结构一点没动。
+         三个属性是自动播放的前提：muted（静音）+ playsinline（手机上不强制全屏）+ loop（循环）。
+         aria-hidden 表示它是纯装饰，读屏软件跳过它。
+         视频是 HEVC 编码，万一某个浏览器放不了，底色里那张静态图会顶上来，
+         所以最差情况也只是"不动"，不会是一块空白。 -->
+    <section class="hero" aria-hidden="true">
+      <video class="hero-video" autoplay muted loop playsinline preload="auto"
+             poster="assets/sea-poster.jpg">
+        <source src="assets/sea.mp4" type="video/mp4">
+      </video>
+    </section>
+
     <header class="topbar">
       <div class="brand">
         <span class="brand-name">来源看板</span>
