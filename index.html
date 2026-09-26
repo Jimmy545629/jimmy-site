@@ -65,10 +65,12 @@
   <div id="modal-root"></div>
 
   <!-- 全部用传统 <script src>，按顺序加载。
-       绝不用 type="module"——Day 5 实验 3 实测过，本地双击的页面会直接白屏。 -->
+       绝不用 type="module"——Day 5 实验 3 实测过，本地双击的页面会直接白屏。
+       components.js 必须排在 ui.js 前面：ui.js 一加载就要用 SBComponents。 -->
   <script src="assets/config.js"></script>
   <script src="assets/store.js"></script>
   <script src="assets/rules.js"></script>
+  <script src="assets/components.js"></script>
   <script src="assets/ui.js"></script>
 </body>
 </html>

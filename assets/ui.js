@@ -1,7 +1,12 @@
 /* ui.js —— 只干两件事：把算好的结果画到页面上；把用户的点击和输入收起来。
    它不碰 localStorage（一律走 SBStore），也不做计算（一律走 SBRules）。
    页面上出现的每一段"用户自己输入的字符串"，都用 textContent 塞进去，绝不拼 innerHTML
-   ——因为标题里万一有 < > 这类符号，拼 HTML 会让页面整个错乱（AGENTS.md 第 4 条第 5 项）。 */
+   ——因为标题里万一有 < > 这类符号，拼 HTML 会让页面整个错乱（AGENTS.md 第 4 条第 5 项）。
+
+   Day 8 余力加练（2026-09-26 补做）：把「长什么样」搬到 assets/components.js。
+   这个文件现在只负责「摆哪些积木、每块里放什么内容」；
+   卡片/列表行/按钮/标签/表单字段/弹窗底部按钮的**结构和 class 名**，
+   统一由 SBComponents 提供——同一个东西不再有四五份手抄版本。 */
 
 (function (global) {
   'use strict';
@@ -9,6 +14,7 @@
   var CFG = global.SB_CONFIG;
   var Store = global.SBStore;
   var Rules = global.SBRules;
+  var C = global.SBComponents;
 
   /* 输入框的长度上限（PRD 4.1 / 4.2 定的） */
   var NAME_MAX = 20;
@@ -26,19 +32,15 @@
 
   function $(id) { return document.getElementById(id); }
 
+  /* el() 现在只是 components.js 里 h() 的一层薄壳。
+     留着这个写法是因为页面里调用点很多，全换成 h() 要改几十处、风险不值当；
+     但底层已经只有一份实现——"造元素"的规矩集中在 SBComponents.h 里。 */
   function el(tag, cls, text) {
-    var n = document.createElement(tag);
-    if (cls) n.className = cls;
-    if (text !== undefined && text !== null) n.textContent = String(text);
-    return n;
+    return C.h(tag, cls ? { class: cls } : null, text);
   }
 
-  function append(parent) {
-    for (var i = 1; i < arguments.length; i++) {
-      if (arguments[i]) parent.appendChild(arguments[i]);
-    }
-    return parent;
-  }
+  /* 说明：这里原来有个 append(parent, ...子节点) 的小工具，
+     Day 8 抽组件时它的调用点全部改成 C.h(...) 的多参数写法了，所以删掉。 */
 
   function clear(node) {
     if (!node) return;
@@ -135,20 +137,18 @@
     m.box.appendChild(el('h3', 'modal-title', opts.title || '请确认'));
     m.box.appendChild(el('p', 'modal-text', opts.message || ''));
 
-    var foot = el('div', 'modal-foot');
-    var cancel = el('button', 'btn btn-ghost', opts.cancelText || '取消');
-    cancel.type = 'button';
-    var ok = el('button', 'btn btn-danger', opts.confirmText || '确定删除');
-    ok.type = 'button';
-    append(foot, cancel, ok);
-    m.box.appendChild(foot);
-
-    cancel.addEventListener('click', m.close);
-    ok.addEventListener('click', function () {
-      m.close();
-      if (typeof opts.onConfirm === 'function') opts.onConfirm();
+    var foot = C.ModalFoot({
+      cancel: opts.cancelText || '取消',
+      confirm: opts.confirmText || '确定删除',
+      confirmKind: 'danger',            // 删除类操作，主按钮用危险色
+      onCancel: m.close,
+      onConfirm: function () {
+        m.close();
+        if (typeof opts.onConfirm === 'function') opts.onConfirm();
+      }
     });
-    ok.focus();
+    m.box.appendChild(foot.el);
+    foot.confirm.focus();
   }
 
   /* 新增 / 编辑一条记录（F3、F8） */
@@ -164,11 +164,7 @@
     var m = openModal();
     m.box.appendChild(el('h3', 'modal-title', editing ? '编辑这条记录' : '记录一条'));
 
-    var form = el('div', 'form');
-
     /* 来源 */
-    var f1 = el('label', 'field');
-    f1.appendChild(el('span', 'field-label', '来源 *'));
     var sel = document.createElement('select');
     sel.className = 'input';
     for (var i = 0; i < sources.length; i++) {
@@ -178,103 +174,95 @@
       sel.appendChild(opt);
     }
     sel.value = editing ? item.sourceId : (presetSourceId || sources[0].id);
-    f1.appendChild(sel);
 
     /* 标题 */
-    var f2 = el('label', 'field');
-    f2.appendChild(el('span', 'field-label', '标题 *'));
     var titleIn = document.createElement('input');
     titleIn.type = 'text';
     titleIn.className = 'input';
     titleIn.maxLength = TITLE_MAX;
     titleIn.value = editing ? item.title : '';
     titleIn.placeholder = '看到的那条东西叫什么';
-    f2.appendChild(titleIn);
 
     /* 链接 */
-    var f3 = el('label', 'field');
-    f3.appendChild(el('span', 'field-label', '链接（可以不填）'));
     var urlIn = document.createElement('input');
     urlIn.type = 'text';
     urlIn.className = 'input';
     urlIn.value = editing ? (item.url || '') : '';
     urlIn.placeholder = '原文地址';
-    f3.appendChild(urlIn);
 
     /* 我的一句话 */
-    var f4 = el('label', 'field');
-    f4.appendChild(el('span', 'field-label', '我的一句话（可以不填）'));
     var noteIn = document.createElement('textarea');
     noteIn.className = 'input';
     noteIn.rows = 3;
     noteIn.maxLength = NOTE_MAX;
     noteIn.value = editing ? (item.note || '') : '';
     noteIn.placeholder = '为什么值得记';
-    f4.appendChild(noteIn);
 
     /* 记录时间 */
-    var f5 = el('label', 'field');
-    f5.appendChild(el('span', 'field-label', '记录时间'));
     var dateIn = document.createElement('input');
     dateIn.type = 'date';
     dateIn.className = 'input';
     dateIn.value = Store.dateStamp(editing && item.recordedAt ? item.recordedAt : null);
-    f5.appendChild(dateIn);
-    f5.appendChild(el('span', 'field-hint', '默认是今天。如果是补记前几天看到的东西，可以改成那天。'));
 
-    append(form, f1, f2, f3, f4, f5);
-    m.box.appendChild(form);
+    /* 五个字段交给 Field() 统一包成 <label class="field">：
+       标签在上、控件在下、提示最后——四处弹窗用的是同一套结构。 */
+    m.box.appendChild(C.h('div', { class: 'form' },
+      C.Field({ label: '来源 *', control: sel }),
+      C.Field({ label: '标题 *', control: titleIn }),
+      C.Field({ label: '链接（可以不填）', control: urlIn }),
+      C.Field({ label: '我的一句话（可以不填）', control: noteIn }),
+      C.Field({
+        label: '记录时间',
+        control: dateIn,
+        hint: '默认是今天。如果是补记前几天看到的东西，可以改成那天。'
+      })));
 
     var err = el('p', 'form-error');
     err.hidden = true;
     m.box.appendChild(err);
 
-    var foot = el('div', 'modal-foot');
-    var cancel = el('button', 'btn btn-ghost', '取消');
-    cancel.type = 'button';
-    var ok = el('button', 'btn btn-primary', editing ? '保存修改' : '保存');
-    ok.type = 'button';
-    append(foot, cancel, ok);
-    m.box.appendChild(foot);
+    var foot = C.ModalFoot({
+      cancel: '取消',
+      confirm: editing ? '保存修改' : '保存',
+      onCancel: m.close,
+      onConfirm: function () {
+        var title = titleIn.value.trim();
+        if (!title) {
+          err.hidden = false;
+          err.textContent = '标题不能空着。';      // AC-09 要求有这句提示
+          titleIn.focus();
+          return;
+        }
 
-    cancel.addEventListener('click', m.close);
+        var recordedAt = isoFromDateInput(dateIn.value);
 
-    ok.addEventListener('click', function () {
-      var title = titleIn.value.trim();
-      if (!title) {
-        err.hidden = false;
-        err.textContent = '标题不能空着。';      // AC-09 要求有这句提示
-        titleIn.focus();
-        return;
+        if (editing) {
+          item.sourceId = sel.value;
+          item.title = title;
+          item.url = urlIn.value.trim();
+          item.note = noteIn.value.trim();
+          item.recordedAt = recordedAt;
+          /* savedAt 故意不动：它记的是「这条什么时候被贴进来的」，
+             改内容不该改变这个时间（TECH_DESIGN 3.4） */
+        } else {
+          state.data.items.push({
+            id: Store.newId('i'),
+            sourceId: sel.value,
+            title: title,
+            url: urlIn.value.trim(),
+            note: noteIn.value.trim(),
+            recordedAt: recordedAt,
+            savedAt: Store.nowISO()
+          });
+        }
+
+        Store.save(state.data);
+        m.close();
+        renderAll();
+        toast(editing ? '已保存修改。' : '记下了：' + title);
       }
-
-      var recordedAt = isoFromDateInput(dateIn.value);
-
-      if (editing) {
-        item.sourceId = sel.value;
-        item.title = title;
-        item.url = urlIn.value.trim();
-        item.note = noteIn.value.trim();
-        item.recordedAt = recordedAt;
-        /* savedAt 故意不动：它记的是「这条什么时候被贴进来的」，
-           改内容不该改变这个时间（TECH_DESIGN 3.4） */
-      } else {
-        state.data.items.push({
-          id: Store.newId('i'),
-          sourceId: sel.value,
-          title: title,
-          url: urlIn.value.trim(),
-          note: noteIn.value.trim(),
-          recordedAt: recordedAt,
-          savedAt: Store.nowISO()
-        });
-      }
-
-      Store.save(state.data);
-      m.close();
-      renderAll();
-      toast(editing ? '已保存修改。' : '记下了：' + title);
     });
+    m.box.appendChild(foot.el);
 
     titleIn.focus();
   }
@@ -299,74 +287,63 @@
     var m = openModal();
     m.box.appendChild(el('h3', 'modal-title', '添加一个来源'));
 
-    var form = el('div', 'form');
-
-    var f1 = el('label', 'field');
-    f1.appendChild(el('span', 'field-label', '名称 *'));
     var nameIn = document.createElement('input');
     nameIn.type = 'text';
     nameIn.className = 'input';
     nameIn.maxLength = NAME_MAX;
     nameIn.placeholder = '比如 掘金、36氪、GitHub Trending';
-    f1.appendChild(nameIn);
 
-    var f2 = el('label', 'field');
-    f2.appendChild(el('span', 'field-label', '地址（可以不填）'));
     var urlIn = document.createElement('input');
     urlIn.type = 'text';
     urlIn.className = 'input';
     urlIn.placeholder = '填了就能从卡片上一键点过去看';
-    f2.appendChild(urlIn);
 
-    append(form, f1, f2);
-    m.box.appendChild(form);
+    m.box.appendChild(C.h('div', { class: 'form' },
+      C.Field({ label: '名称 *', control: nameIn }),
+      C.Field({ label: '地址（可以不填）', control: urlIn })));
 
     var err = el('p', 'form-error');
     err.hidden = true;
     m.box.appendChild(err);
 
-    var foot = el('div', 'modal-foot');
-    var cancel = el('button', 'btn btn-ghost', '取消');
-    cancel.type = 'button';
-    var ok = el('button', 'btn btn-primary', '添加');
-    ok.type = 'button';
-    append(foot, cancel, ok);
-    m.box.appendChild(foot);
+    var foot = C.ModalFoot({
+      cancel: '取消',
+      confirm: '添加',
+      onCancel: m.close,
+      onConfirm: function () {
+        var name = nameIn.value.trim();
+        if (!name) {
+          err.hidden = false;
+          err.textContent = '名称不能空着。';
+          nameIn.focus();
+          return;
+        }
+        if (name.length > NAME_MAX) {
+          err.hidden = false;
+          err.textContent = '名称最多 ' + NAME_MAX + ' 个字，现在有 ' + name.length + ' 个。';
+          return;
+        }
+        /* 每次都要重新判断一次，防止在弹窗里放着的时候已经被加满了 */
+        if (state.data.sources.length >= CFG.MAX_SOURCES) {
+          err.hidden = false;
+          err.textContent = '已经 ' + CFG.MAX_SOURCES + ' 个了，加不进去了。';
+          return;
+        }
 
-    cancel.addEventListener('click', m.close);
+        state.data.sources.push({
+          id: Store.newId('s'),
+          name: name,
+          url: urlIn.value.trim(),
+          createdAt: Store.nowISO()
+        });
 
-    ok.addEventListener('click', function () {
-      var name = nameIn.value.trim();
-      if (!name) {
-        err.hidden = false;
-        err.textContent = '名称不能空着。';
-        nameIn.focus();
-        return;
+        Store.save(state.data);
+        m.close();
+        renderAll();
+        toast('加好了：' + name);
       }
-      if (name.length > NAME_MAX) {
-        err.hidden = false;
-        err.textContent = '名称最多 ' + NAME_MAX + ' 个字，现在有 ' + name.length + ' 个。';
-        return;
-      }
-      /* 每次都要重新判断一次，防止在弹窗里放着的时候已经被加满了 */
-      if (state.data.sources.length >= CFG.MAX_SOURCES) {
-        err.hidden = false;
-        err.textContent = '已经 ' + CFG.MAX_SOURCES + ' 个了，加不进去了。';
-        return;
-      }
-
-      state.data.sources.push({
-        id: Store.newId('s'),
-        name: name,
-        url: urlIn.value.trim(),
-        createdAt: Store.nowISO()
-      });
-
-      Store.save(state.data);
-      m.close();
-      renderAll();
-      toast('加好了：' + name);
     });
+    m.box.appendChild(foot.el);
 
     nameIn.focus();
   }
@@ -376,57 +353,46 @@
     var m = openModal();
     m.box.appendChild(el('h3', 'modal-title', '改一下这个来源'));
 
-    var form = el('div', 'form');
-
-    var f1 = el('label', 'field');
-    f1.appendChild(el('span', 'field-label', '名称 *'));
     var nameIn = document.createElement('input');
     nameIn.type = 'text';
     nameIn.className = 'input';
     nameIn.maxLength = NAME_MAX;
     nameIn.value = source.name;
-    f1.appendChild(nameIn);
 
-    var f2 = el('label', 'field');
-    f2.appendChild(el('span', 'field-label', '地址（可以不填）'));
     var urlIn = document.createElement('input');
     urlIn.type = 'text';
     urlIn.className = 'input';
     urlIn.value = source.url || '';
-    f2.appendChild(urlIn);
 
-    append(form, f1, f2);
-    m.box.appendChild(form);
+    m.box.appendChild(C.h('div', { class: 'form' },
+      C.Field({ label: '名称 *', control: nameIn }),
+      C.Field({ label: '地址（可以不填）', control: urlIn })));
 
     var err = el('p', 'form-error');
     err.hidden = true;
     m.box.appendChild(err);
 
-    var foot = el('div', 'modal-foot');
-    var cancel = el('button', 'btn btn-ghost', '取消');
-    cancel.type = 'button';
-    var ok = el('button', 'btn btn-primary', '保存');
-    ok.type = 'button';
-    append(foot, cancel, ok);
-    m.box.appendChild(foot);
-
-    cancel.addEventListener('click', m.close);
-
-    ok.addEventListener('click', function () {
-      var name = nameIn.value.trim();
-      if (!name) {
-        err.hidden = false;
-        err.textContent = '名称不能空着。';
-        nameIn.focus();
-        return;
+    var foot = C.ModalFoot({
+      cancel: '取消',
+      confirm: '保存',
+      onCancel: m.close,
+      onConfirm: function () {
+        var name = nameIn.value.trim();
+        if (!name) {
+          err.hidden = false;
+          err.textContent = '名称不能空着。';
+          nameIn.focus();
+          return;
+        }
+        source.name = name;
+        source.url = urlIn.value.trim();
+        Store.save(state.data);
+        m.close();
+        renderAll();
+        toast('改好了。');
       }
-      source.name = name;
-      source.url = urlIn.value.trim();
-      Store.save(state.data);
-      m.close();
-      renderAll();
-      toast('改好了。');
     });
+    m.box.appendChild(foot.el);
 
     nameIn.focus();
   }
@@ -511,37 +477,36 @@
       : '（' + stat.daysSince + ' 天没记录了）'));
   }
 
-  /* 一张来源卡片（F1） */
+  /* 一张来源卡片（F1）
+     结构全交给 SBComponents.Card —— 包括「该看了」那个标签：
+     只要告诉它 stale: true，它会**同时**加上标红的类和「该看了」三个字，
+     想漏也漏不掉（规则 6：状态不能只靠颜色一个维度）。 */
   function sourceCard(stat) {
     var s = stat.source;
+    var href = 'source.html?id=' + encodeURIComponent(s.id);
 
-    var card = el('article', 'source-card' + (stat.isStale ? ' is-stale' : ''));
-
-    var head = el('div', 'src-head');
     var nameLink = el('a', 'src-name', s.name);
-    nameLink.href = 'source.html?id=' + encodeURIComponent(s.id);
+    nameLink.href = href;
     nameLink.title = s.name;                       // 名字太长时鼠标停一下能看全
+
     var countLink = el('a', 'src-count', stat.itemCount + ' 条');
-    countLink.href = nameLink.href;
-    append(head, nameLink, countLink);
+    countLink.href = href;
 
-    var last = el('p', 'src-last');
-    var lastText = el('span', 'src-last-text');
-    lastText.appendChild(el('span', 'src-last-label', '最后记录：'));
-    lastText.appendChild(el('span', 'src-last-value', Rules.lastRecordText(stat)));
-    last.appendChild(lastText);
-    if (stat.isStale) last.appendChild(el('span', 'stale-tag', '该看了'));  // 颜色 + 文字，两样都要
+    var foot = [];
+    if (s.url) foot.push(linkOrText(s.url, 'src-url'));
+    foot.push(C.Button({
+      text: '记录一条',
+      kind: 'primary',
+      size: 'sm',
+      onClick: function () { openItemModal(null, s.id); }
+    }));
 
-    var foot = el('div', 'src-foot');
-    if (s.url) foot.appendChild(linkOrText(s.url, 'src-url'));
-
-    var rec = el('button', 'btn btn-primary btn-sm', '记录一条');
-    rec.type = 'button';
-    rec.addEventListener('click', function () { openItemModal(null, s.id); });
-    foot.appendChild(rec);
-
-    append(card, head, last, foot);
-    return card;
+    return C.Card({
+      stale: stat.isStale,
+      head: [nameLink, countLink],
+      meta: { label: '最后记录：', value: Rules.lastRecordText(stat) },
+      foot: foot
+    });
   }
 
   function renderSources() {
@@ -616,57 +581,50 @@
   }
 
   function filterChip(id, label) {
-    var b = el('button', 'chip' + (state.filter === id ? ' is-active' : ''), label);
-    b.type = 'button';
-    b.title = label;
-    b.addEventListener('click', function () {
-      state.filter = id;
-      renderFilters();
-      renderTimeline();
+    return C.Button({
+      variant: 'chip',
+      text: label,
+      title: label,
+      active: state.filter === id,
+      onClick: function () {
+        state.filter = id;
+        renderFilters();
+        renderTimeline();
+      }
     });
-    return b;
   }
 
-  /* 时间线上的一条（F4） */
+  /* 时间线上的一条（F4）
+     结构交给 SBComponents.Row。连「标题什么时候做成链接」这个判断也收进去了：
+     传 href 就是链接（新窗口打开），不传就是普通文字。 */
   function itemRow(item) {
-    var li = el('li', 'item');
+    var isLink = looksLikeUrl(item.url);
 
-    var head = el('div', 'item-head');
-    var tag = el('span', 'tag', sourceName(item.sourceId));
-    tag.style.background = Rules.sourceColor(state.data.sources, item.sourceId);
     var when = el('span', 'item-time', relTimeText(item.recordedAt));
     when.title = item.recordedAt || '';
-    append(head, tag, when);
 
-    var titleNode;
-    if (looksLikeUrl(item.url)) {
-      titleNode = el('a', 'item-title', item.title);
-      titleNode.href = item.url;
-      titleNode.target = '_blank';
-      titleNode.rel = 'noreferrer';
-    } else {
-      titleNode = el('div', 'item-title', item.title);
-    }
+    var acts = [];
+    if (isLink) acts.push(linkOrText(item.url, 'item-url'));
+    acts.push(C.Button({
+      variant: 'link', text: '编辑',
+      onClick: function () { openItemModal(item, item.sourceId); }
+    }));
+    acts.push(C.Button({
+      variant: 'link', text: '删除', danger: true,
+      onClick: function () { removeItem(item); }
+    }));
 
-    append(li, head, titleNode);
-
-    if (item.note) li.appendChild(el('p', 'item-note', item.note));
-
-    var acts = el('div', 'item-acts');
-    if (looksLikeUrl(item.url)) acts.appendChild(linkOrText(item.url, 'item-url'));
-
-    var edit = el('button', 'link-btn', '编辑');
-    edit.type = 'button';
-    edit.addEventListener('click', function () { openItemModal(item, item.sourceId); });
-
-    var del = el('button', 'link-btn is-danger', '删除');
-    del.type = 'button';
-    del.addEventListener('click', function () { removeItem(item); });
-
-    append(acts, edit, del);
-    li.appendChild(acts);
-
-    return li;
+    return C.Row({
+      head: [
+        /* Tag() 只接受 SBRules 白名单里的颜色 ——
+           标签是白字压色块，名单外的颜色很可能根本读不清（规则 1） */
+        C.Tag(sourceName(item.sourceId), Rules.sourceColor(state.data.sources, item.sourceId)),
+        when
+      ],
+      title: { text: item.title, href: isLink ? item.url : null },
+      note: item.note,
+      acts: acts
+    });
   }
 
   function renderTimeline() {
